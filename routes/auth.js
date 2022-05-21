@@ -52,6 +52,58 @@ router.post(
 			res.json({ authToken });
 		} catch (error) {
 			console.error(error.message);
+			res.send(500).send("internal Server Error");
+		}
+	}
+);
+
+// authenticaion a user using: POST"api/auth/login. no login requried"
+router.post(
+	"/login",
+	[
+		body("email", "Enter a valid email").isEmail(),
+		body("password", "password cannot be blank ").exists(),
+	],
+
+	async (req, res) => {
+		// if there are error return bad request and errors
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		// get the email and password from the req.body
+		const { email, password } = req.body;
+
+		try {
+			// getting the user
+			let user = await User.findOne({ email });
+			// if user not exist throw error
+			if (!user) {
+				return res
+					.status(400)
+					.json({ error: "Please try to login with correct credential" });
+			}
+			// compare password
+			const passwordCompare = await bcrypt.compare(password, user.password);
+			if (!passwordCompare) {
+				return res
+					.status(400)
+					.json({ error: "Please try to login with correct credential" });
+			}
+			// correct credential
+			const data = {
+				user: {
+					id: user.id,
+				},
+			};
+
+			// get auth token
+			const authToken = jwt.sign(data, JWT_SECRET);
+			res.json({ authToken });
+		} catch (error) {
+			console.error(error.message);
+			res.send(500).send("internal Server Error");
 		}
 	}
 );
