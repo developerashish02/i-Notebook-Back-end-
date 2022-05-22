@@ -4,7 +4,7 @@ const fetchuser = require("../middlewares/fetchuser");
 const Note = require("../models/Note");
 const { body, validationResult } = require("express-validator");
 
-/* ROUTE:1 get all the user notes using : GET "/api/auth/getuser" Login requreid */
+/* ROUTE:1 get all the user notes using : GET "/api/Notes/getuser" Login requreid */
 router.get("/fetchallnotes", fetchuser, async (req, res) => {
 	try {
 		const notes = await Note.find({ user: req.user.id });
@@ -15,7 +15,7 @@ router.get("/fetchallnotes", fetchuser, async (req, res) => {
 	}
 });
 
-/* ROUTE:2 add a new notes using : POST "/api/auth/addnote" Login requreid */
+/* ROUTE:2 add a new notes using : POST "/api/Notes/addnote" Login requreid */
 router.post(
 	"/addnote",
 	fetchuser,
@@ -49,15 +49,15 @@ router.post(
 	}
 );
 
-/* ROUTE:3 update notes using : PUT "/api/auth/updatenote" Login requreid */
+/* ROUTE:3 update notes using : PUT "/api/Notes/updatenote" Login requreid */
 
 router.put(
 	"/updatenote/:id",
 	fetchuser,
-	// [
-	//     body("title", "Enter a valid title").isLength({ min: 3 }),
-	//     body("description", "Description must be 5 character").isLength({ min: 5 }),
-	// ],
+	[
+		body("title", "Enter a valid title").isLength({ min: 3 }),
+		body("description", "Description must be 5 character").isLength({ min: 5 }),
+	],
 	async (req, res) => {
 		try {
 			const { title, description, tag } = req.body;
@@ -95,5 +95,28 @@ router.put(
 		}
 	}
 );
+
+/* ROUTE:4 delete notes using : DELETE "/api/Notes/deletenote" Login requreid */
+
+router.delete("/deletenote/:id", fetchuser, async (req, res) => {
+	try {
+		// find the note to be delete and deleted
+		let note = await Note.findById(req.params.id);
+		if (!note) {
+			return res.status(404).send("Not found");
+		}
+
+		// Allow deletion only if  user owns this note
+		if (note.user.toString() !== req.user.id) {
+			return res.status(401).send("Not Allowed");
+		}
+
+		note = await Note.findByIdAndDelete(req.params.id);
+		res.json({ success: "Note has been deleted" });
+	} catch (error) {
+		console.error(error.message);
+		res.send(500).send("internal Server Error");
+	}
+});
 
 module.exports = router;
